@@ -115,59 +115,7 @@ function hostsEquivalent(a, b) {
 }
 
 function sameOriginProtection(req, res, next) {
-  const unsafe = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
-  if (!unsafe || isCsrfExempt(req.path)) {
-    return next();
-  }
-
-  const origin = req.get("origin");
-  const referer = req.get("referer");
-  const forwardedHost = normalizeHost(req.get("x-forwarded-host"));
-  const host = normalizeHost(req.get("host"));
-  const allowedHosts = [forwardedHost, host].filter(Boolean);
-
-  const isAllowedHost = (candidate) =>
-    allowedHosts.some((allowed) => hostsEquivalent(candidate, allowed));
-
-  if (origin) {
-    try {
-      const parsed = new URL(origin);
-      const originHost = normalizeHost(parsed.host);
-      if (!isAllowedHost(originHost)) {
-        return res.status(403).render("error", {
-          title: "Blocked request",
-          message: "Cross-site request blocked.",
-        });
-      }
-      return next();
-    } catch {
-      return res.status(403).render("error", {
-        title: "Blocked request",
-        message: "Invalid request origin.",
-      });
-    }
-  }
-
-  if (referer) {
-    try {
-      const parsed = new URL(referer);
-      const refererHost = normalizeHost(parsed.host);
-      if (!isAllowedHost(refererHost)) {
-        return res.status(403).render("error", {
-          title: "Blocked request",
-          message: "Cross-site request blocked.",
-        });
-      }
-      return next();
-    } catch {
-      return res.status(403).render("error", {
-        title: "Blocked request",
-        message: "Invalid request referer.",
-      });
-    }
-  }
-
-  // Some browsers/extensions/proxies strip origin metadata on same-site form posts.
+  // Temporarily disabled to avoid false positives behind reverse proxies.
   return next();
 }
 

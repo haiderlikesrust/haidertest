@@ -25,6 +25,7 @@
     "express-rate-limit": "^8.2.1",
     "express-session": "^1.19.0",
     "helmet": "^8.1.0",
+    "katex": "^0.16.33",
     "markdown-it": "^14.1.1",
     "markdown-it-anchor": "^9.2.0",
     "multer": "^2.1.0",

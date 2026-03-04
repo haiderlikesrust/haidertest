@@ -96,8 +96,33 @@ Return a concise answer.`;
   );
 }
 
+async function didYouKnow({ title, content }) {
+  const system = `You are a curious wiki assistant that finds the single most interesting, surprising, or non-obvious fact hidden inside an article.
+Rules:
+- Return ONE sentence only. Start it with "Did you know" and end with a period.
+- The fact must come directly from the article content.
+- Make it feel genuinely interesting, not bland or obvious.
+- Do not add quotation marks or markdown.`;
+
+  const user = `Article title: ${title}
+
+Article content (may be truncated):
+${content.slice(0, 6000)}
+
+Return the single most interesting "Did you know..." sentence from this article.`;
+
+  return chat(
+    [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    0.5
+  );
+}
+
 module.exports = {
   rewriteSelection,
   generateArticle,
   answerArticleQuestion,
+  didYouKnow,
 };

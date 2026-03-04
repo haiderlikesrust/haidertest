@@ -2,6 +2,7 @@ const MarkdownIt = require("markdown-it");
 const markdownItAnchor = require("markdown-it-anchor");
 const sanitizeHtml = require("sanitize-html");
 const slugify = require("slugify");
+const katex = require("katex");
 
 const md = new MarkdownIt({
   html: false,
@@ -99,6 +100,49 @@ function withReferences(raw) {
   return { replaced, refs };
 }
 
+// Render $$ ... $$ and $ ... $ with KaTeX server-side.
+// Placeholders are plain alphanumeric so they survive markdown-it and sanitize-html untouched.
+function withMath(raw) {
+  const chunks = {};
+  let counter = 0;
+
+  // Block math: $$...$$ (may span multiple lines)
+  let out = raw.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
+    const ph = `KATEXPH${counter++}BLK`;
+    try {
+      chunks[ph] = `<span class="katex-block">${katex.renderToString(tex.trim(), {
+        displayMode: true,
+        throwOnError: false,
+        output: "html",
+      })}</span>`;
+    } catch (e) {
+      chunks[ph] = `<span class="katex-error">$$${escapeHtml(tex)}$$</span>`;
+    }
+    return ph;
+  });
+
+  // Inline math: $...$ (single line, not empty)
+  out = out.replace(/\$([^\$\n]+?)\$/g, (_, tex) => {
+    const ph = `KATEXPH${counter++}INL`;
+    try {
+      chunks[ph] = katex.renderToString(tex.trim(), {
+        displayMode: false,
+        throwOnError: false,
+        output: "html",
+      });
+    } catch (e) {
+      chunks[ph] = `<span class="katex-error">${escapeHtml(tex)}</span>`;
+    }
+    return ph;
+  });
+
+  return { mathOut: out, chunks };
+}
+
+function restoreMath(html, chunks) {
+  return html.replace(/KATEXPH\d+(?:BLK|INL)/g, (ph) => chunks[ph] || ph);
+}
+
 function escapeHtml(raw) {
   return String(raw)
     .replace(/&/g, "&amp;")
@@ -159,20 +203,16 @@ function renderWiki(content, options = {}) {
   const { replaced, refs } = withReferences(withoutInfobox);
   const withoutCategories = replaced.replace(/\[\[Category:([^\]]+)\]\]/gi, "");
 
-  const rendered = md.render(withoutCategories);
+  // Math: extract & render with KaTeX before markdown-it touches the content
+  const { mathOut, chunks } = withMath(withoutCategories);
+
+  const rendered = md.render(mathOut);
   const withImageWrappers = withImageLayout(rendered);
+  // sanitize-html runs BEFORE restoreMath so KaTeX HTML is never stripped
   const safeHtml = sanitizeHtml(withImageWrappers, {
     allowedTags: sanitizeHtml.defaults.allowedTags.concat([
-      "h1",
-      "h2",
-      "h3",
-      "h4",
-      "h5",
-      "h6",
-      "sup",
-      "img",
-      "figure",
-      "figcaption",
+      "h1", "h2", "h3", "h4", "h5", "h6",
+      "sup", "img", "figure", "figcaption",
     ]),
     allowedAttributes: {
       ...sanitizeHtml.defaults.allowedAttributes,
@@ -181,17 +221,14 @@ function renderWiki(content, options = {}) {
       figure: ["class"],
       figcaption: ["class"],
       img: ["src", "srcset", "alt", "title", "width", "height", "loading", "class"],
-      h1: ["id"],
-      h2: ["id"],
-      h3: ["id"],
-      h4: ["id"],
-      h5: ["id"],
-      h6: ["id"],
+      h1: ["id"], h2: ["id"], h3: ["id"], h4: ["id"], h5: ["id"], h6: ["id"],
     },
   });
+  // Restore KaTeX HTML after sanitization — bypasses stripping entirely
+  const finalHtml = restoreMath(safeHtml, chunks);
 
   return {
-    html: safeHtml,
+    html: finalHtml,
     toc: buildToc(safeHtml),
     categories,
     refs,

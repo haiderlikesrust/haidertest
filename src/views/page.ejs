@@ -1,91 +1,155 @@
 <%- include("partials/header", { title: page.title }) %>
-<div class="tabs">
-  <a class="active" href="/wiki/<%= page.slug %>">Article</a>
-  <a href="/wiki/<%= page.slug %>/talk">Talk (<%= talkCount %>)</a>
-  <% if (canEdit) { %><a href="/wiki/<%= page.slug %>/edit">Edit</a><% } %>
-  <a href="/wiki/<%= page.slug %>/history">View history</a>
-</div>
-<article class="article-layout <%= rendered.infobox ? 'has-infobox' : 'no-infobox' %>">
-  <div class="article-main">
-    <header class="article-header">
-      <h1><%= page.title %></h1>
-      <p class="article-meta">Last updated: <%= new Date(page.updated_at).toLocaleString() %></p>
+  <div class="tabs">
+    <a class="active" href="/wiki/<%= page.slug %>">Article</a>
+    <a href="/wiki/<%= page.slug %>/talk">Talk (<%= talkCount %>)</a>
+    <% if (canEdit) { %><a href="/wiki/<%= page.slug %>/edit">Edit</a>
+      <% } %>
+        <a href="/wiki/<%= page.slug %>/history">View history</a>
+  </div>
+  <article class="article-layout <%= rendered.infobox ? 'has-infobox' : 'no-infobox' %>">
+    <div class="article-main">
+      <header class="article-header">
+        <div class="article-header-top">
+          <h1>
+            <%= page.title %>
+          </h1>
+          <button type="button" class="share-btn" id="share-btn" title="Copy link to this article">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
+            Copy link
+          </button>
+        </div>
+        <p class="article-meta">Last updated: <%= new Date(page.updated_at).toLocaleString() %>
+        </p>
+      </header>
+      <% if (page.short_description) { %>
+        <p class="subtitle">
+          <%= page.short_description %>
+        </p>
+        <% } %>
+
+          <% if (rendered.toc.length) { %>
+            <section class="toc">
+              <h3>Contents</h3>
+              <ol>
+                <% rendered.toc.forEach((entry)=> { %>
+                  <li class="lvl-<%= entry.level %>"><a href="#<%= entry.id %>">
+                      <%= entry.text %>
+                    </a></li>
+                  <% }) %>
+              </ol>
+            </section>
+            <% } %>
+
+              <section class="wiki-body article-surface"><%- rendered.html %></section>
+
+              <% if (rendered.refs.length) { %>
+                <section class="references">
+                  <h2>References</h2>
+                  <ol>
+                    <% rendered.refs.forEach((ref)=> { %>
+                      <li id="note-<%= ref.n %>">
+                        <%= ref.body %>
+                      </li>
+                      <% }) %>
+                  </ol>
+                </section>
+                <% } %>
+
+                  <% if (page.categories?.length) { %>
+                    <div class="categories">
+                      <span class="categories-label">Categories:</span>
+                      <% page.categories.forEach((cat, index)=> { %>
+                        <a href="/category/<%= encodeURIComponent(cat) %>">
+                          <%= cat %>
+                        </a>
+                        <%= index < page.categories.length - 1 ? "," : "" %>
+                          <% }) %>
+                    </div>
+                    <% } %>
+    </div>
+
+    <% if (rendered.infobox) { %>
+      <aside class="infobox">
+        <h4>Infobox <%= rendered.infobox.kind %>
+        </h4>
+        <table>
+          <% rendered.infobox.fields.forEach((field)=> { %>
+            <tr>
+              <th>
+                <%= field.key %>
+              </th>
+              <td>
+                <%= field.value %>
+              </td>
+            </tr>
+            <% }) %>
+        </table>
+      </aside>
+      <% } %>
+  </article>
+
+  <button id="article-chat-toggle" class="article-chat-toggle" type="button" aria-label="Open article assistant">
+    <img class="article-chat-toggle-avatar" src="/botpfp.png" alt="Bot avatar"
+      onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';" />
+    <span class="article-chat-toggle-fallback">AI</span>
+  </button>
+  <section id="article-chat-panel" class="article-chat-panel hidden" aria-live="polite">
+    <header class="article-chat-header">
+      <strong>Ask this article</strong>
+      <button type="button" id="article-chat-close">Close</button>
     </header>
-    <% if (page.short_description) { %><p class="subtitle"><%= page.short_description %></p><% } %>
-
-    <% if (rendered.toc.length) { %>
-    <section class="toc">
-      <h3>Contents</h3>
-      <ol>
-        <% rendered.toc.forEach((entry) => { %>
-        <li class="lvl-<%= entry.level %>"><a href="#<%= entry.id %>"><%= entry.text %></a></li>
-        <% }) %>
-      </ol>
-    </section>
-    <% } %>
-
-    <section class="wiki-body article-surface"><%- rendered.html %></section>
-
-    <% if (rendered.refs.length) { %>
-    <section class="references">
-      <h2>References</h2>
-      <ol>
-        <% rendered.refs.forEach((ref) => { %>
-        <li id="note-<%= ref.n %>"><%= ref.body %></li>
-        <% }) %>
-      </ol>
-    </section>
-    <% } %>
-
-    <% if (page.categories?.length) { %>
-    <div class="categories">
-      <span class="categories-label">Categories:</span>
-      <% page.categories.forEach((cat, index) => { %>
-      <a href="/category/<%= encodeURIComponent(cat) %>"><%= cat %></a><%= index < page.categories.length - 1 ? "," : "" %>
-      <% }) %>
+    <div id="article-chat-messages" class="article-chat-messages">
+      <div class="article-chat-msg-row bot">
+        <img class="article-chat-avatar" src="/botpfp.png" alt="Bot avatar" />
+        <div class="article-chat-msg bot">Ask a question about this page. I only answer from this article.</div>
+      </div>
     </div>
-    <% } %>
-  </div>
-
-  <% if (rendered.infobox) { %>
-  <aside class="infobox">
-    <h4>Infobox <%= rendered.infobox.kind %></h4>
-    <table>
-      <% rendered.infobox.fields.forEach((field) => { %>
-      <tr><th><%= field.key %></th><td><%= field.value %></td></tr>
-      <% }) %>
-    </table>
-  </aside>
-  <% } %>
-</article>
-
-<button id="article-chat-toggle" class="article-chat-toggle" type="button" aria-label="Open article assistant">
-  <img
-    class="article-chat-toggle-avatar"
-    src="/botpfp.png"
-    alt="Bot avatar"
-    onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
-  />
-  <span class="article-chat-toggle-fallback">AI</span>
-</button>
-<section id="article-chat-panel" class="article-chat-panel hidden" aria-live="polite">
-  <header class="article-chat-header">
-    <strong>Ask this article</strong>
-    <button type="button" id="article-chat-close">Close</button>
-  </header>
-  <div id="article-chat-messages" class="article-chat-messages">
-    <div class="article-chat-msg-row bot">
-      <img class="article-chat-avatar" src="/botpfp.png" alt="Bot avatar" />
-      <div class="article-chat-msg bot">Ask a question about this page. I only answer from this article.</div>
-    </div>
-  </div>
-  <form id="article-chat-form" class="article-chat-form">
-    <input id="article-chat-input" placeholder="Ask about this article..." maxlength="1200" required />
-    <button type="submit">Send</button>
-  </form>
-</section>
-<textarea id="article-chat-source" class="hidden"><%= page.current_content || "" %></textarea>
-<input id="article-chat-title" class="hidden" value="<%= page.title %>" />
-<input id="article-chat-avatar-url" class="hidden" value="/botpfp.png" />
-<script defer src="/articleChat.js"></script>
-<%- include("partials/footer") %>
+    <form id="article-chat-form" class="article-chat-form">
+      <input id="article-chat-input" placeholder="Ask about this article..." maxlength="1200" required />
+      <button type="submit">Send</button>
+    </form>
+  </section>
+  <textarea id="article-chat-source" class="hidden"><%= page.current_content || "" %></textarea>
+  <input id="article-chat-title" class="hidden" value="<%= page.title %>" />
+  <input id="article-chat-avatar-url" class="hidden" value="/botpfp.png" />
+  <script defer src="/articleChat.js"></script>
+  <div id="share-toast" class="share-toast" aria-live="polite"></div>
+  <script>
+    (function () {
+      var btn = document.getElementById('share-btn');
+      var toast = document.getElementById('share-toast');
+      var toastTimer;
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        navigator.clipboard.writeText(window.location.href).then(function () {
+          clearTimeout(toastTimer);
+          toast.textContent = 'Link copied!';
+          toast.classList.add('share-toast--show');
+          toastTimer = setTimeout(function () {
+            toast.classList.remove('share-toast--show');
+          }, 2200);
+        }).catch(function () {
+          // Fallback: select a temporary input
+          var tmp = document.createElement('input');
+          tmp.value = window.location.href;
+          document.body.appendChild(tmp);
+          tmp.select();
+          document.execCommand('copy');
+          document.body.removeChild(tmp);
+          toast.textContent = 'Link copied!';
+          toast.classList.add('share-toast--show');
+          toastTimer = setTimeout(function () {
+            toast.classList.remove('share-toast--show');
+          }, 2200);
+        });
+      });
+    })();
+  </script>
+  <%- include("partials/footer") %>

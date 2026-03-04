@@ -258,8 +258,14 @@ app.post("/logout", requireAuth, (req, res) => {
 });
 
 app.get("/", requireAuth, async (req, res) => {
-  const recent = await wikiService.listRecentPages(15);
-  return res.render("home", { recent });
+  const recent = await wikiService.listRecentPages(12);
+  const [totalPagesResult, totalCategoriesResult] = await Promise.all([
+    query("SELECT COUNT(*) AS count FROM pages"),
+    query("SELECT COUNT(*) AS count FROM categories"),
+  ]);
+  const totalPages = parseInt(totalPagesResult.rows[0]?.count || 0, 10);
+  const totalCategories = parseInt(totalCategoriesResult.rows[0]?.count || 0, 10);
+  return res.render("home", { recent, totalPages, totalCategories });
 });
 
 app.get("/wiki/random", requireAuth, async (req, res) => {
@@ -520,6 +526,36 @@ app.post("/admin/invites", requireRole(["admin"]), async (req, res) => {
       });
   }
   return res.redirect(`/admin/users?created=${encodeURIComponent(code)}`);
+});
+
+// Did You Know — cached AI fact from a random article
+const dykCache = { fact: null, title: null, slug: null, expiresAt: 0 };
+
+app.get("/api/did-you-know", requireAuth, apiLimiter, async (req, res) => {
+  try {
+    const force = req.query.refresh === "1";
+    if (!force && dykCache.fact && Date.now() < dykCache.expiresAt) {
+      return res.json({ ok: true, ...dykCache });
+    }
+    const slug = await wikiService.randomPageSlug();
+    if (!slug) return res.json({ ok: false, reason: "no_articles" });
+    const page = await wikiService.getPageBySlug(slug);
+    if (!page || !page.current_content?.trim()) {
+      return res.json({ ok: false, reason: "empty_article" });
+    }
+    const fact = await aiService.didYouKnow({
+      title: page.title,
+      content: page.current_content,
+    });
+    dykCache.fact = fact;
+    dykCache.title = page.title;
+    dykCache.slug = page.slug;
+    dykCache.expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
+    return res.json({ ok: true, fact, title: page.title, slug: page.slug });
+  } catch (err) {
+    console.error("Did you know error:", err);
+    return res.status(500).json({ ok: false, reason: "error" });
+  }
 });
 
 app.post("/api/ai/rewrite-selection", requireRole(["admin", "editor"]), apiLimiter, async (req, res) => {

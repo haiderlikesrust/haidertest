@@ -103,7 +103,8 @@ function isCsrfExempt(pathname) {
 function normalizeHost(raw) {
   const value = String(raw || "").trim().toLowerCase();
   if (!value) return "";
-  return value.split(":")[0];
+  const firstValue = value.split(",")[0].trim();
+  return firstValue.split(":")[0];
 }
 
 function hostsEquivalent(a, b) {
@@ -121,15 +122,18 @@ function sameOriginProtection(req, res, next) {
 
   const origin = req.get("origin");
   const referer = req.get("referer");
-  const currentHost = normalizeHost(
-    req.get("x-forwarded-host") || req.get("host")
-  );
+  const forwardedHost = normalizeHost(req.get("x-forwarded-host"));
+  const host = normalizeHost(req.get("host"));
+  const allowedHosts = [forwardedHost, host].filter(Boolean);
+
+  const isAllowedHost = (candidate) =>
+    allowedHosts.some((allowed) => hostsEquivalent(candidate, allowed));
 
   if (origin) {
     try {
       const parsed = new URL(origin);
       const originHost = normalizeHost(parsed.host);
-      if (!hostsEquivalent(originHost, currentHost)) {
+      if (!isAllowedHost(originHost)) {
         return res.status(403).render("error", {
           title: "Blocked request",
           message: "Cross-site request blocked.",
@@ -148,7 +152,7 @@ function sameOriginProtection(req, res, next) {
     try {
       const parsed = new URL(referer);
       const refererHost = normalizeHost(parsed.host);
-      if (!hostsEquivalent(refererHost, currentHost)) {
+      if (!isAllowedHost(refererHost)) {
         return res.status(403).render("error", {
           title: "Blocked request",
           message: "Cross-site request blocked.",

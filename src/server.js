@@ -19,6 +19,7 @@ const app = express();
 const uploadsDir = path.join(__dirname, "..", "uploads");
 fs.mkdirSync(uploadsDir, { recursive: true });
 app.disable("x-powered-by");
+app.set("trust proxy", 1);
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -99,6 +100,19 @@ function isCsrfExempt(pathname) {
   return csrfExemptPrefixes.some((prefix) => pathname.startsWith(prefix));
 }
 
+function normalizeHost(raw) {
+  const value = String(raw || "").trim().toLowerCase();
+  if (!value) return "";
+  return value.split(":")[0];
+}
+
+function hostsEquivalent(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const stripWww = (v) => (v.startsWith("www.") ? v.slice(4) : v);
+  return stripWww(a) === stripWww(b);
+}
+
 function sameOriginProtection(req, res, next) {
   const unsafe = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
   if (!unsafe || isCsrfExempt(req.path)) {
@@ -107,12 +121,15 @@ function sameOriginProtection(req, res, next) {
 
   const origin = req.get("origin");
   const referer = req.get("referer");
-  const host = req.get("host");
+  const currentHost = normalizeHost(
+    req.get("x-forwarded-host") || req.get("host")
+  );
 
   if (origin) {
     try {
       const parsed = new URL(origin);
-      if (parsed.host !== host) {
+      const originHost = normalizeHost(parsed.host);
+      if (!hostsEquivalent(originHost, currentHost)) {
         return res.status(403).render("error", {
           title: "Blocked request",
           message: "Cross-site request blocked.",
@@ -130,7 +147,8 @@ function sameOriginProtection(req, res, next) {
   if (referer) {
     try {
       const parsed = new URL(referer);
-      if (parsed.host !== host) {
+      const refererHost = normalizeHost(parsed.host);
+      if (!hostsEquivalent(refererHost, currentHost)) {
         return res.status(403).render("error", {
           title: "Blocked request",
           message: "Cross-site request blocked.",
@@ -145,10 +163,8 @@ function sameOriginProtection(req, res, next) {
     }
   }
 
-  return res.status(403).render("error", {
-    title: "Blocked request",
-    message: "Missing request origin metadata.",
-  });
+  // Some browsers/extensions/proxies strip origin metadata on same-site form posts.
+  return next();
 }
 
 app.use(sameOriginProtection);

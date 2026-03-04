@@ -1,0 +1,21 @@
+<%- include("partials/header", { title: `${page.title} - History` }) %>
+<div class="tabs">
+  <a href="/wiki/<%= page.slug %>">Article</a>
+  <a href="/wiki/<%= page.slug %>/talk">Talk</a>
+  <% if (canEdit) { %><a href="/wiki/<%= page.slug %>/edit">Edit</a><% } %>
+  <a class="active" href="/wiki/<%= page.slug %>/history">View history</a>
+</div>
+<h1>Revision history: <%= page.title %></h1>
+<table class="table">
+  <tr><th>ID</th><th>Timestamp</th><th>Editor</th><th>Summary</th><th>Action</th></tr>
+  <% revisions.forEach((rev) => { %>
+  <tr>
+    <td><%= rev.id %></td>
+    <td><%= new Date(rev.created_at).toLocaleString() %></td>
+    <td><%= rev.username || "system" %></td>
+    <td><%= rev.summary %></td>
+    <td><a href="/wiki/<%= page.slug %>/diff?a=<%= rev.id %>&b=<%= page.current_revision_id %>">Compare to current</a></td>
+  </tr>
+  <% }) %>
+</table>
+<%- include("partials/footer") %>

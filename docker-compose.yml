@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16
+    container_name: narfwiki-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: narfwiki
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-haider}
+    ports:
+      - "5432:5432"
+    volumes:
+      - narfwiki_db_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    container_name: narfwiki-web
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      DB_URL: postgresql://postgres:${POSTGRES_PASSWORD:-haider}@db:5432/narfwiki
+      WEB_BASE_URL: http://web:3000
+    command: sh -c "npm run migrate && npm run seed:admin && npm run start:web"
+    ports:
+      - "3000:3000"
+
+  bot:
+    build: .
+    container_name: narfwiki-bot
+    restart: unless-stopped
+    depends_on:
+      - web
+    env_file:
+      - .env
+    environment:
+      DB_URL: postgresql://postgres:${POSTGRES_PASSWORD:-haider}@db:5432/narfwiki
+      WEB_BASE_URL: http://web:3000
+    command: sh -c "npm run start:bot"
+    ports:
+      - "3001:3001"
+
+volumes:
+  narfwiki_db_data:

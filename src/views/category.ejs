@@ -1,0 +1,8 @@
+<%- include("partials/header", { title: `Category: ${name}` }) %>
+<h1>Category: <%= name %></h1>
+<ul>
+  <% pages.forEach((page) => { %>
+  <li><a href="/wiki/<%= page.slug %>"><%= page.title %></a></li>
+  <% }) %>
+</ul>
+<%- include("partials/footer") %>

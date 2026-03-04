@@ -1,0 +1,13 @@
+<%- include("partials/header", { title: "Main page" }) %>
+<h1>Main page</h1>
+<p class="subtitle">Private encyclopedia for your team.</p>
+<h2>Recently updated pages</h2>
+<ul>
+  <% recent.forEach((item) => { %>
+  <li>
+    <a href="/wiki/<%= item.slug %>"><%= item.title %></a>
+    <small>(<%= new Date(item.updated_at).toLocaleString() %>)</small>
+  </li>
+  <% }) %>
+</ul>
+<%- include("partials/footer") %>

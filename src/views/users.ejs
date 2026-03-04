@@ -1,0 +1,49 @@
+<%- include("partials/header", { title: "Manage users" }) %>
+<h1>Manage users</h1>
+<% if (error) { %><p class="error"><%= error %></p><% } %>
+<% if (createdCode) { %>
+<p><strong>Invite created:</strong> <code><%= createdCode %></code></p>
+<% } %>
+<form method="POST" action="/admin/invites" class="stack">
+  <h2>Create invite code</h2>
+  <label>Role
+    <select name="role">
+      <option value="reader">reader</option>
+      <option value="editor">editor</option>
+      <option value="admin">admin</option>
+    </select>
+  </label>
+  <label>Custom code (optional) <input name="code" placeholder="NARF-MYTEAM01" /></label>
+  <label>Expires at (optional) <input type="datetime-local" name="expiresAt" /></label>
+  <button type="submit">Create invite</button>
+</form>
+
+<h2>Recent invites</h2>
+<table class="table">
+  <tr><th>Code</th><th>Role</th><th>Created by</th><th>Created</th><th>Expires</th><th>Status</th></tr>
+  <% invites.forEach((inv) => { %>
+  <tr>
+    <td><code><%= inv.code %></code></td>
+    <td><%= inv.role %></td>
+    <td><%= inv.created_by_username || "system" %></td>
+    <td><%= new Date(inv.created_at).toLocaleString() %></td>
+    <td><%= inv.expires_at ? new Date(inv.expires_at).toLocaleString() : "-" %></td>
+    <td>
+      <% if (inv.used_at) { %>
+      Used by <%= inv.used_by_username || "user" %> at <%= new Date(inv.used_at).toLocaleString() %>
+      <% } else { %>
+      Unused
+      <% } %>
+    </td>
+  </tr>
+  <% }) %>
+</table>
+
+<h2>Users</h2>
+<table class="table">
+  <tr><th>Username</th><th>Role</th><th>Created</th></tr>
+  <% users.forEach((u) => { %>
+  <tr><td><%= u.username %></td><td><%= u.role %></td><td><%= new Date(u.created_at).toLocaleString() %></td></tr>
+  <% }) %>
+</table>
+<%- include("partials/footer") %>

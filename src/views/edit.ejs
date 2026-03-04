@@ -1,0 +1,206 @@
+<%- include("partials/header", { title: mode === "create" ? "Create page" : `Edit ${page.title}` }) %>
+
+<section class="editor-page">
+  <header class="editor-header">
+    <h1><%= mode === "create" ? "Create page" : `Editing: ${page.title}` %></h1>
+    <p class="subtitle">
+      Use Markdown + wiki syntax. Save creates a new revision, Preview renders before publishing.
+    </p>
+  </header>
+
+  <% if (typeof error !== "undefined" && error) { %><p class="error"><%= error %></p><% } %>
+
+  <form
+    method="POST"
+    class="editor-form"
+    id="editor-form"
+    data-draft-key="<%= mode === 'edit' ? `edit:${page.slug}` : 'create:new' %>"
+  >
+    <section class="editor-meta-grid">
+      <label>
+        Title
+        <input type="text" name="title" required value="<%= formData.title %>" />
+      </label>
+      <label>
+        Short description
+        <input type="text" name="shortDescription" value="<%= formData.shortDescription %>" />
+      </label>
+      <label>
+        Categories (comma separated)
+        <input type="text" name="categories" value="<%= formData.categories %>" />
+      </label>
+      <label>
+        Edit summary
+        <input type="text" name="summary" value="<%= formData.summary %>" />
+      </label>
+    </section>
+
+    <section class="editor-workspace">
+      <div class="editor-main">
+        <div class="editor-toolbar">
+          <button type="button" class="snippet-btn" data-insert="## Section title">H2</button>
+          <button type="button" class="snippet-btn" data-insert="### Subsection">H3</button>
+          <button type="button" class="snippet-btn" data-insert="**bold**">Bold</button>
+          <button type="button" class="snippet-btn" data-insert="[[Page Name]]">Wiki Link</button>
+          <button type="button" class="snippet-btn" data-insert="<ref>Reference text</ref>">Ref</button>
+          <button type="button" class="snippet-btn" data-insert="{{Infobox Person | name= | born= }}">Infobox</button>
+          <button type="button" class="snippet-btn" data-insert="[[Category:Name]]">Category</button>
+          <button type="button" class="snippet-btn" id="ai-proofread-selection">AI Proofread selection</button>
+          <button type="button" class="snippet-btn" id="ai-grammar-selection">AI Fix grammar</button>
+        </div>
+
+        <label class="editor-label">
+          Content
+          <textarea id="editor-content" name="content" rows="24" required><%= formData.content %></textarea>
+        </label>
+        <div class="editor-status-row">
+          <span id="editor-word-count">0 words</span>
+          <span class="editor-muted">Tip: press Tab inside editor to indent.</span>
+        </div>
+      </div>
+
+      <aside class="editor-sidepanel">
+        <h3>Quick syntax guide</h3>
+        <ul>
+          <li><code>## Heading</code></li>
+          <li><code>[[Internal Page]]</code></li>
+          <li><code>[[Category:History]]</code></li>
+          <li><code>#REDIRECT [[Target Page]]</code></li>
+          <li><code>&lt;ref&gt;Source&lt;/ref&gt;</code></li>
+          <li><code>{{Infobox Person | name=... }}</code></li>
+          <li><code>{{Template:Notice}}</code></li>
+        </ul>
+        <p class="editor-muted">
+          Everything is sanitized on render. Use Preview before saving when editing large pages.
+        </p>
+
+        <hr />
+        <details class="editor-details">
+          <summary>AI Writing Assistant (GLM-5)</summary>
+          <p class="editor-muted">Choose your flow: manual writing or AI-generated draft from notes.</p>
+          <label>
+            Mode
+            <select id="ai-mode">
+              <option value="manual">Manual write</option>
+              <option value="ai">Write with AI</option>
+            </select>
+          </label>
+          <div id="ai-generate-panel" class="ai-generate-panel hidden">
+            <label>
+              Information for AI
+              <textarea
+                id="ai-notes"
+                rows="8"
+                placeholder="Paste facts, bullet points, timeline, and instructions for article generation."
+              ></textarea>
+            </label>
+            <button type="button" id="ai-generate-article">Generate article draft</button>
+            <p id="ai-status" class="editor-muted"></p>
+          </div>
+        </details>
+
+        <hr />
+        <details class="editor-details" open>
+          <summary>Images</summary>
+          <p class="editor-muted">Upload by picker or drag and drop. Reuse previous uploads from gallery.</p>
+          <label>
+            Select image(s)
+            <input type="file" id="editor-image-file" accept="image/*" multiple />
+          </label>
+          <div id="editor-image-dropzone" class="editor-dropzone">
+            Drag and drop images here
+          </div>
+          <details class="editor-subdetails">
+            <summary>Image options (optional)</summary>
+            <label>
+              Alt text
+              <input type="text" id="editor-image-alt" placeholder="Describe this image for accessibility" />
+            </label>
+            <label>
+              Caption
+              <input type="text" id="editor-image-caption" placeholder="Short caption" />
+            </label>
+            <div class="editor-image-layout-grid">
+              <label>
+                Alignment
+                <select id="editor-image-align">
+                  <option value="center">Center</option>
+                  <option value="left">Left</option>
+                  <option value="right" selected>Right</option>
+                </select>
+              </label>
+              <label>
+                Size
+                <select id="editor-image-size">
+                  <option value="100">Full width</option>
+                  <option value="75">Large (75%)</option>
+                  <option value="60">Medium (60%)</option>
+                  <option value="50">Half (50%)</option>
+                  <option value="40" selected>Small (40%)</option>
+                  <option value="33">One third (33%)</option>
+                  <option value="25">Thumbnail (25%)</option>
+                </select>
+              </label>
+            </div>
+          </details>
+          <div class="button-row">
+            <button type="button" id="editor-image-upload-btn">Upload selected</button>
+            <button type="button" id="editor-image-gallery-btn">Open gallery</button>
+          </div>
+          <p id="editor-image-status" class="editor-muted"></p>
+          <div id="editor-image-gallery" class="editor-gallery hidden">
+            <input id="editor-image-gallery-search" type="text" placeholder="Search uploaded images..." />
+            <div id="editor-image-gallery-list" class="editor-gallery-list"></div>
+          </div>
+        </details>
+      </aside>
+    </section>
+
+    <div class="editor-actions">
+      <button type="submit" name="action" value="save">Save page</button>
+      <button type="submit" name="action" value="preview">Preview</button>
+      <% if (mode === "edit" && user.role === "admin") { %>
+      <button
+        type="submit"
+        formaction="/wiki/<%= page.slug %>/delete"
+        formmethod="POST"
+        onclick="return confirm('Delete this page?')"
+      >Delete</button>
+      <% } %>
+    </div>
+  </form>
+</section>
+
+<% if (preview) { %>
+<section class="editor-preview-wrap">
+  <h2>Preview</h2>
+  <article class="article-layout <%= preview.infobox ? 'has-infobox' : 'no-infobox' %>">
+    <div class="article-main">
+      <% if (preview.toc.length) { %>
+      <section class="toc">
+        <h3>Contents</h3>
+        <ol>
+          <% preview.toc.forEach((entry) => { %>
+          <li class="lvl-<%= entry.level %>"><a href="#<%= entry.id %>"><%= entry.text %></a></li>
+          <% }) %>
+        </ol>
+      </section>
+      <% } %>
+      <section class="wiki-body article-surface"><%- preview.html %></section>
+    </div>
+    <% if (preview.infobox) { %>
+    <aside class="infobox">
+      <h4>Infobox <%= preview.infobox.kind %></h4>
+      <table>
+        <% preview.infobox.fields.forEach((field) => { %>
+        <tr><th><%= field.key %></th><td><%= field.value %></td></tr>
+        <% }) %>
+      </table>
+    </aside>
+    <% } %>
+  </article>
+</section>
+<% } %>
+
+<script defer src="/editor.js"></script>
+<%- include("partials/footer") %>

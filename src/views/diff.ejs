@@ -1,0 +1,6 @@
+<%- include("partials/header", { title: `${page.title} - Diff` }) %>
+<h1>Diff for <%= page.title %> (<%= revA %> vs <%= revB %>)</h1>
+<pre class="diff">
+<% diff.forEach((part) => { %><span class="<%= part.added ? "add" : part.removed ? "remove" : "same" %>"><%= part.value %></span><% }) %>
+</pre>
+<%- include("partials/footer") %>

@@ -1,0 +1,25 @@
+<%- include("partials/header", { title: "Login" }) %>
+<section class="login-shell">
+  <div class="login-brand">
+    <p class="auth-kicker">Secure Wiki</p>
+    <h1><%= siteName %></h1>
+    <p>A private, Wikipedia-style knowledge base for your team.</p>
+    <ul>
+      <li>Private access only</li>
+      <li>Page editing + revision history</li>
+      <li>Admin/editor workflow</li>
+    </ul>
+  </div>
+  <div class="login-card">
+    <h2>Sign in</h2>
+    <p class="subtitle">Use your account to continue.</p>
+    <% if (error) { %><p class="error"><%= error %></p><% } %>
+    <form method="POST" action="/login" class="stack auth-form">
+      <label>Username <input type="text" name="username" required autocomplete="username" /></label>
+      <label>Password <input type="password" name="password" required autocomplete="current-password" /></label>
+      <button type="submit">Log in</button>
+    </form>
+    <p class="auth-footnote">Need an account? Ask admin for an invite code and <a href="/register">register here</a>.</p>
+  </div>
+</section>
+<%- include("partials/footer") %>

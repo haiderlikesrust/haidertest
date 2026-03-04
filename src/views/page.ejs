@@ -1,0 +1,91 @@
+<%- include("partials/header", { title: page.title }) %>
+<div class="tabs">
+  <a class="active" href="/wiki/<%= page.slug %>">Article</a>
+  <a href="/wiki/<%= page.slug %>/talk">Talk (<%= talkCount %>)</a>
+  <% if (canEdit) { %><a href="/wiki/<%= page.slug %>/edit">Edit</a><% } %>
+  <a href="/wiki/<%= page.slug %>/history">View history</a>
+</div>
+<article class="article-layout <%= rendered.infobox ? 'has-infobox' : 'no-infobox' %>">
+  <div class="article-main">
+    <header class="article-header">
+      <h1><%= page.title %></h1>
+      <p class="article-meta">Last updated: <%= new Date(page.updated_at).toLocaleString() %></p>
+    </header>
+    <% if (page.short_description) { %><p class="subtitle"><%= page.short_description %></p><% } %>
+
+    <% if (rendered.toc.length) { %>
+    <section class="toc">
+      <h3>Contents</h3>
+      <ol>
+        <% rendered.toc.forEach((entry) => { %>
+        <li class="lvl-<%= entry.level %>"><a href="#<%= entry.id %>"><%= entry.text %></a></li>
+        <% }) %>
+      </ol>
+    </section>
+    <% } %>
+
+    <section class="wiki-body article-surface"><%- rendered.html %></section>
+
+    <% if (rendered.refs.length) { %>
+    <section class="references">
+      <h2>References</h2>
+      <ol>
+        <% rendered.refs.forEach((ref) => { %>
+        <li id="note-<%= ref.n %>"><%= ref.body %></li>
+        <% }) %>
+      </ol>
+    </section>
+    <% } %>
+
+    <% if (page.categories?.length) { %>
+    <div class="categories">
+      <span class="categories-label">Categories:</span>
+      <% page.categories.forEach((cat, index) => { %>
+      <a href="/category/<%= encodeURIComponent(cat) %>"><%= cat %></a><%= index < page.categories.length - 1 ? "," : "" %>
+      <% }) %>
+    </div>
+    <% } %>
+  </div>
+
+  <% if (rendered.infobox) { %>
+  <aside class="infobox">
+    <h4>Infobox <%= rendered.infobox.kind %></h4>
+    <table>
+      <% rendered.infobox.fields.forEach((field) => { %>
+      <tr><th><%= field.key %></th><td><%= field.value %></td></tr>
+      <% }) %>
+    </table>
+  </aside>
+  <% } %>
+</article>
+
+<button id="article-chat-toggle" class="article-chat-toggle" type="button" aria-label="Open article assistant">
+  <img
+    class="article-chat-toggle-avatar"
+    src="/botpfp.png"
+    alt="Bot avatar"
+    onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
+  />
+  <span class="article-chat-toggle-fallback">AI</span>
+</button>
+<section id="article-chat-panel" class="article-chat-panel hidden" aria-live="polite">
+  <header class="article-chat-header">
+    <strong>Ask this article</strong>
+    <button type="button" id="article-chat-close">Close</button>
+  </header>
+  <div id="article-chat-messages" class="article-chat-messages">
+    <div class="article-chat-msg-row bot">
+      <img class="article-chat-avatar" src="/botpfp.png" alt="Bot avatar" />
+      <div class="article-chat-msg bot">Ask a question about this page. I only answer from this article.</div>
+    </div>
+  </div>
+  <form id="article-chat-form" class="article-chat-form">
+    <input id="article-chat-input" placeholder="Ask about this article..." maxlength="1200" required />
+    <button type="submit">Send</button>
+  </form>
+</section>
+<textarea id="article-chat-source" class="hidden"><%= page.current_content || "" %></textarea>
+<input id="article-chat-title" class="hidden" value="<%= page.title %>" />
+<input id="article-chat-avatar-url" class="hidden" value="/botpfp.png" />
+<script defer src="/articleChat.js"></script>
+<%- include("partials/footer") %>

@@ -1,0 +1,23 @@
+<%- include("partials/header", { title: `${page.title} - Talk` }) %>
+<div class="tabs">
+  <a href="/wiki/<%= page.slug %>">Article</a>
+  <a class="active" href="/wiki/<%= page.slug %>/talk">Talk</a>
+  <% if (canEdit) { %><a href="/wiki/<%= page.slug %>/edit">Edit</a><% } %>
+  <a href="/wiki/<%= page.slug %>/history">View history</a>
+</div>
+<h1>Talk: <%= page.title %></h1>
+<% if (canEdit) { %>
+<form method="POST" class="stack">
+  <textarea name="content" rows="5" placeholder="New discussion message (Markdown supported)." required></textarea>
+  <button type="submit">Post comment</button>
+</form>
+<% } %>
+<section class="talk-thread">
+  <% posts.forEach((post) => { %>
+  <article class="talk-post">
+    <div><strong><%= post.username || "system" %></strong> · <%= new Date(post.created_at).toLocaleString() %></div>
+    <div class="wiki-body"><%- post.renderedHtml %></div>
+  </article>
+  <% }) %>
+</section>
+<%- include("partials/footer") %>
